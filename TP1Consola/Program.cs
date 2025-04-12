@@ -13,18 +13,18 @@ internal class Program
         {
             Console.Clear();
             Console.WriteLine("Menu Principal");
-            Console.WriteLine("1 - Ordenes");
-            Console.WriteLine("2 - Clientes");
+            Console.WriteLine("1 - Clientes");
+            Console.WriteLine("2 - Ordenes");
             Console.WriteLine("x - Salir");
             Console.Write("Ingresa una opción:");
             var option = Console.ReadLine();
             switch (option)
             {
                 case "1":
-                    OrdenesMenu();
+                    ClientesMenu();
                     break;
                 case "2":
-                    ClientesMenu();
+                    OrdenesMenu();
                     break;
                 case "x":
                     Console.WriteLine("Fin del Programa");
@@ -45,7 +45,7 @@ internal class Program
             Console.WriteLine("1 - Tomar una orden");
             Console.WriteLine("2 - Historial de ordenes");
             Console.WriteLine("3 - Anular orden");
-            Console.WriteLine("4 - X Nada X");
+            Console.WriteLine("4 - Editar orden");
             Console.WriteLine("r - Volver");
             Console.Write("Ingrese una opción:");
             var option = Console.ReadLine();
@@ -61,7 +61,7 @@ internal class Program
                     AnularOrden();
                     break;
                 case "4":
-                    //EditarOrden();
+                    EditarOrden();
                     break;
                 case "r":
                     return;
@@ -69,6 +69,198 @@ internal class Program
                     break;
             }
         } while (true);
+    }
+
+    private static void EditarOrden()
+    {
+        Console.Clear();
+        Console.WriteLine("Editando Ordenes");
+        Console.WriteLine("Lista de ordenes para editar");
+        using (var context = new MarketContext())
+        {
+            var ordenes = context.Ordenes.OrderBy(o => o.NumeroOrden)
+                .Select(o => new
+                {
+                    o.NumeroOrden,
+                    o.Valor,
+                    o.Cliente
+                }).ToList();
+            foreach (var item in ordenes)
+            {
+                Console.WriteLine(item);
+            }
+
+            Console.Write("Ingrese el número de orden a editar (0 para cancelar):");
+            int numeroOrden = int.Parse(Console.ReadLine()!);
+            if (numeroOrden < 0)
+            {
+                Console.WriteLine("Número de orden inválido");
+                Console.ReadLine();
+                return;
+            }
+            if (numeroOrden == 0)
+            {
+                Console.WriteLine("Operación cancelada");
+                Console.ReadLine();
+                return;
+            }
+
+            var ordenEnDb = context.Ordenes.Include(o => o.Cliente)
+                .FirstOrDefault(b => b.NumeroOrden == numeroOrden);
+            if (ordenEnDb == null)
+            {
+                Console.WriteLine("Orden no existente");
+                Console.ReadLine();
+                return;
+            }
+
+            Console.WriteLine($"Fecha actual de la orden: {ordenEnDb.FechaOrden}");
+            Console.Write("Ingrese la fecha nueva (o presione ENTER para mantener):");
+            var nuevaFecha = Console.ReadLine();
+            if (!string.IsNullOrEmpty(nuevaFecha))
+            {
+                if (!DateOnly.TryParse(nuevaFecha, out DateOnly fechaOrden) ||
+                    fechaOrden > DateOnly.FromDateTime(DateTime.Today))
+                {
+                    Console.WriteLine("Fecha inválida");
+                    Console.ReadLine();
+                    return;
+                }
+                ordenEnDb.FechaOrden = fechaOrden;
+            }
+
+            Console.WriteLine($"Valor de la orden: {ordenEnDb.Valor}");
+            Console.Write("Ingrese el nuevo valor de la orden (o presione ENTER para mantener):");
+            var nuevoValor = Console.ReadLine();
+            if (!string.IsNullOrEmpty(nuevoValor))
+            {
+                if (!int.TryParse(nuevoValor, out int ordenValor) || ordenValor <= 0)
+                {
+                    Console.WriteLine("Valor inválido");
+                    Console.ReadLine();
+                    return;
+                }
+                ordenEnDb.Valor = ordenValor;
+            }
+
+            Console.WriteLine($"Cliente actual asignado:{ordenEnDb.Cliente}");
+            Console.WriteLine("Clientes disponibles");
+            var clientes = context.Clientes
+                .OrderBy(c => c.Id)
+                .ToList();
+            foreach (var cliente in clientes)
+            {
+                Console.WriteLine(cliente);
+            }
+            Console.Write("Seleccione el ID del cliente (presione ENTER para mantener o 0 para crear uno nuevo):");
+            var nuevoCliente = Console.ReadLine();
+            if (!string.IsNullOrEmpty(nuevoCliente))
+            {
+                if (!int.TryParse(nuevoCliente, out int clienteId) || clienteId < 0)
+                {
+                    Console.WriteLine("ID Inválido");
+                    Console.ReadLine();
+                    return;
+                }
+                if (clienteId > 0)
+                {
+                    var clienteExiste = context.Clientes.Any(a => a.Id == clienteId);
+                    if (!clienteExiste)
+                    {
+                        Console.WriteLine("ID de cliente no encontrado");
+                        Console.ReadLine();
+                        return;
+                    }
+                    ordenEnDb.ClienteId = clienteId;
+
+                }
+                else
+                {
+                    Console.WriteLine("Ingresando nuevo Cliente");
+                    Console.Write("Ingrese nombre:");
+                    var nombre = Console.ReadLine();
+                    Console.Write("Ingrese apellido:");
+                    var apellido = Console.ReadLine();
+                    Console.Write("Ingrese Dni:");
+                    if (!int.TryParse(Console.ReadLine(), out int dni))
+                    {
+                        Console.WriteLine("DNI Inválido");
+                        Console.ReadLine();
+                        return;
+                    }
+                    var clienteExistente = context.Clientes.FirstOrDefault(
+                            c => c.Dni == dni);
+
+                    if (clienteExistente is not null)
+                    {
+                        Console.WriteLine($"El cliente {clienteExistente} ya existe");
+                        Console.WriteLine("Se asignará el cliente existente a la orden");
+                        ordenEnDb.ClienteId = clienteExistente.Id;
+                    }
+                    else
+                    {
+                        Cliente Cliente = new Cliente
+                        {
+                            Nombre = nombre ?? string.Empty,
+                            Apellido = apellido ?? string.Empty,
+                            Dni = dni
+                        };
+
+                        var validationContext = new ValidationContext(Cliente);
+                        var errorMessages = new List<ValidationResult>();
+
+                        bool isValid = Validator.TryValidateObject(Cliente, validationContext, errorMessages, true);
+
+                        if (isValid)
+                        {
+                            //ordenEnDb.Cliente = Cliente;
+                            //Alternativa Carlos
+                            context.Clientes.Add(Cliente);
+                            context.SaveChanges();
+                            ordenEnDb.ClienteId = Cliente.Id;
+                        }
+                        else
+                        {
+                            foreach (var message in errorMessages)
+                            {
+                                Console.WriteLine(message);
+                            }
+                        }
+
+                    }
+                }
+
+            }
+
+            var ordenOriginal = context.Ordenes
+                .AsNoTracking()
+                .FirstOrDefault(o => o.NumeroOrden == ordenEnDb.NumeroOrden);
+
+            Console.Write($"Estás seguro que vas a editar \"{ordenOriginal!}\"? (y/n):");
+            var confirm = Console.ReadLine();
+            try
+            {
+                if (confirm?.ToLower() == "y")
+                {
+                    context.SaveChanges();
+                    Console.WriteLine("Orden editada");
+                }
+                else
+                {
+                    Console.WriteLine("Operación cancelada");
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.Message);
+            }
+            Console.ReadLine();
+            return;
+
+
+        }
     }
 
     private static void AnularOrden()
@@ -79,7 +271,7 @@ internal class Program
         using (var context = new MarketContext())
         {
             var ordenes = context.Ordenes
-                .OrderBy(o => o.Id)
+                .OrderBy(o => o.NumeroOrden)
                 .Select(o => new
                 {
                     o.NumeroOrden,
@@ -88,23 +280,22 @@ internal class Program
                 }).ToList();
             foreach (var ord in ordenes)
             {
-                Console.WriteLine($"Número de orden: {ord.NumeroOrden} - Cliente: {ord.Cliente.Nombre}" +
-                    $" - {ord.Cliente.Apellido} - Valor: {ord.Valor}");
+                Console.WriteLine(ord);
             }
             Console.Write("Seleccione número de orden a anular (0 para salir):");
-            if (!int.TryParse(Console.ReadLine(), out int ordenId) || ordenId < 0)
+            if (!int.TryParse(Console.ReadLine(), out int numeroOrden) || numeroOrden < 0)
             {
                 Console.WriteLine("Número de orden inválido...");
                 Console.ReadLine();
                 return;
             }
-            if (ordenId == 0)
+            if (numeroOrden == 0)
             {
                 Console.WriteLine("Cancelado por usuario");
                 Console.ReadLine();
                 return;
             }
-            var anularOrden = context.Ordenes.Find(ordenId);
+            var anularOrden = context.Ordenes.FirstOrDefault(o => o.NumeroOrden == numeroOrden);
             if (anularOrden is null)
             {
                 Console.WriteLine("Orden no existente");
@@ -118,20 +309,18 @@ internal class Program
             Console.ReadLine();
             return;
         }
-
     }
 
     private static void TomarOrden()
     {
         Console.Clear();
         Console.WriteLine("Añadiendo nueva orden");
-
-        Console.Write("Ingrese el numero de la orden:");
-        if (!int.TryParse(Console.ReadLine(), out var numeroOrden))
+        int nuevoNumeroOrden;
+        using (var context = new MarketContext())
         {
-            Console.WriteLine("Número inválido");
-            Console.ReadLine();
-            return;
+            var ultimaOrden = (context.Ordenes.OrderBy(o => o.NumeroOrden).FirstOrDefault());
+            nuevoNumeroOrden = ultimaOrden!.NumeroOrden++;
+            Console.Write($"El número de la orden será {nuevoNumeroOrden}");
         }
 
         Console.Write("Ingrese la fecha de la orden (dd/mm/yyyy):");
@@ -158,7 +347,7 @@ internal class Program
                 .ToList();
             foreach (var cliente in clientesList)
             {
-                Console.WriteLine($"Código: {cliente.Id} - Nombre: {cliente.Nombre} - {cliente.Apellido}");
+                Console.WriteLine(cliente);
             }
             Console.Write("Ingrese ID del cliente (0 Nuevo cliente):");
             if (!int.TryParse(Console.ReadLine(), out var clienteId) || clienteId < 0)
@@ -176,7 +365,7 @@ internal class Program
             }
             var newOrden = new Orden
             {
-                NumeroOrden = numeroOrden,
+                NumeroOrden = nuevoNumeroOrden,
                 Valor = valor,
                 FechaOrden = fechaOrden,
                 ClienteId = clienteId
@@ -187,21 +376,9 @@ internal class Program
 
             if (validationResult.IsValid)
             {
-                var ordenExistente = context.Ordenes.FirstOrDefault(b => b.Valor == valor! &&
-                    b.ClienteId == clienteId);
-
-                if (ordenExistente is null)
-                {
-                    context.Ordenes.Add(newOrden);
-                    context.SaveChanges();
-                    Console.WriteLine("Orden Añadida Exitosamente");
-
-                }
-                else
-                {
-                    Console.WriteLine("Orden Duplicada");
-                }
-
+                context.Ordenes.Add(newOrden);
+                context.SaveChanges();
+                Console.WriteLine("Orden Añadida Exitosamente");
             }
             else
             {
@@ -222,16 +399,16 @@ internal class Program
         using (var context = new MarketContext())
         {
             var ordenes = context.Ordenes
-                .Include(b => b.Cliente)
-                .Select(b => new
+                .Include(o => o.Cliente)
+                .Select(o => new
                 {
-                    b.NumeroOrden,
-                    b.Cliente
+                    o.NumeroOrden,
+                    o.Cliente
                 })
                 .ToList();
-            foreach (var bo in ordenes)
+            foreach (var or in ordenes)
             {
-                Console.WriteLine($"Número de orden: {bo.NumeroOrden} - Cliente:{bo.Cliente.Nombre} + {bo.Cliente.Apellido}");
+                Console.WriteLine($"Número de orden: {or.NumeroOrden} - Cliente:{or.Cliente}");
             }
         }
         Console.WriteLine("ENTER para continuar");
@@ -286,7 +463,7 @@ internal class Program
                 .ToList();
             foreach (var cliente in clientes)
             {
-                Console.WriteLine($"Id: {cliente.Id} - Nombre: {cliente.Nombre} - {cliente.Apellido}");
+                Console.WriteLine(cliente);
             }
             Console.Write("Ingrese un ID para editar:");
             int clienteId;

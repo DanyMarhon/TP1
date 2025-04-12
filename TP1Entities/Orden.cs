@@ -16,7 +16,7 @@ namespace TP1Entities
         public Cliente? Cliente { get; set; }
         public override string ToString()
         {
-            return $"Número de pedido:{NumeroOrden} - Monto:{Valor} AR$";
+            return $"Número de pedido:{NumeroOrden} - Monto:{Valor} AR$ - Cliente: {Cliente}";
         }
     }
 }

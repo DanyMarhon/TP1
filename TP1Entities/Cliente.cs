@@ -22,7 +22,7 @@ namespace TP1Entities
         public ICollection<Orden>? Ordenes { get; set; }
         public override string ToString()
         {
-            return $"{Apellido.ToUpper()}, {Nombre}";
+            return $"ID: {Id} Nombre completo: {Apellido.ToUpper()}, {Nombre.ToUpper()}, DNI: {Dni}";
         }
     }
 }
