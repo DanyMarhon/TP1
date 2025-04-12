@@ -11,10 +11,10 @@ namespace TP1Datos
         public DbSet<Orden> Ordenes { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(@"Data Source=DANIEL\SQLEXPRESS; Initial Catalog=OrdenesDb; Trusted_Connection=true; TrustServerCertificate=true;")
-               .EnableSensitiveDataLogging() // Permite ver valores en las consultas
-               .LogTo(Console.WriteLine, LogLevel.Information)
-               .UseLazyLoadingProxies(false);//habilita Lazy Loading
+            optionsBuilder.UseSqlServer(@"Data Source=DANIEL\SQLEXPRESS; Initial Catalog=OrdenesDb; Trusted_Connection=true; TrustServerCertificate=true;");
+               //.EnableSensitiveDataLogging() // Permite ver valores en las consultas
+               //.LogTo(Console.WriteLine, LogLevel.Information)
+               //.UseLazyLoadingProxies(false);//habilita Lazy Loading
         }
         //FluentAPI
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -318,12 +318,12 @@ internal class Program
         int nuevoNumeroOrden;
         using (var context = new MarketContext())
         {
-            var ultimaOrden = (context.Ordenes.OrderBy(o => o.NumeroOrden).FirstOrDefault());
-            nuevoNumeroOrden = ultimaOrden!.NumeroOrden++;
-            Console.Write($"El número de la orden será {nuevoNumeroOrden}");
+            nuevoNumeroOrden = context.Ordenes.Max(o => (int?)o.NumeroOrden) ?? 0;
+            nuevoNumeroOrden++;
+            Console.WriteLine($"El número de la orden será {nuevoNumeroOrden}");
         }
 
-        Console.Write("Ingrese la fecha de la orden (dd/mm/yyyy):");
+        Console.WriteLine("Ingrese la fecha de la orden (dd/mm/yyyy):");
         if (!DateOnly.TryParse(Console.ReadLine(), out var fechaOrden))
         {
             Console.WriteLine("Fecha errónea");
@@ -403,12 +403,13 @@ internal class Program
                 .Select(o => new
                 {
                     o.NumeroOrden,
+                    o.Valor,
                     o.Cliente
                 })
                 .ToList();
             foreach (var or in ordenes)
             {
-                Console.WriteLine($"Número de orden: {or.NumeroOrden} - Cliente:{or.Cliente}");
+                Console.WriteLine($"Orden: {or.NumeroOrden}, Valor: {or.Valor} - Cliente:{or.Cliente}");
             }
         }
         Console.WriteLine("ENTER para continuar");
@@ -591,10 +592,16 @@ internal class Program
 
         using (var context = new MarketContext())
         {
-            bool exist = context.Clientes.Any(a => a.Nombre == nombre &&
-                a.Apellido == apellido);
+            var clienteExistente = context.Clientes.FirstOrDefault(
+                            c => c.Dni == dni);
 
-            if (!exist)
+            if (clienteExistente is not null)
+            {
+                Console.WriteLine($"El cliente {clienteExistente} ya existe");
+                Console.ReadLine();
+                return;
+            }
+            else
             {
                 var cliente = new Cliente
                 {
@@ -622,10 +629,6 @@ internal class Program
                         Console.WriteLine(message);
                     }
                 }
-            }
-            else
-            {
-                Console.WriteLine("Cliente ya existe");
             }
         }
         Console.ReadLine();
