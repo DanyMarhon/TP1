@@ -566,7 +566,12 @@ internal class Program
             }
             else
             {
-                Console.WriteLine("Cliente tiene ordenes activas, no se puede anular");
+                Console.WriteLine("Cliente tiene ordenes activas, no se puede anular \n Ordenes relacionadas:");
+                var clienteOrdenes = context.Ordenes.OrderBy(o => o.Id == clienteId).ToList();
+                foreach (var orden in clienteOrdenes)
+                {
+                    Console.WriteLine(orden);
+                }
             }
 
             Console.ReadLine();
