@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TP1Datos\TP1Datos.csproj" />
+    <ProjectReference Include="..\TP1Servicios\TP1Servicios.csproj" />
+  </ItemGroup>
+
+</Project>
